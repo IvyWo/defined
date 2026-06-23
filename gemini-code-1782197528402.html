@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Genie Executive Cockpit — Strict Original Specifications</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&display=swap');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --sidebar-w: 56px;
+  --brand: #1736F5;
+  --brand-tint: #7FE3CD;
+  --brand-container: #EFF4FF;
+  --bg: #F8FAFF;
+  --surface: #FFFFFF;
+  --surface2: #EFF1FB;
+  --border-v: #EFF1F8;
+  --border: #F3F4F9;
+  --typo-navy: #111827;
+  --muted: #9CA3AF;
+  --success: #10C8A0;
+  --error: #E11D48;
+  --warning: #F97316;
+  --tip-bg: #1E293B;
+  --tip-text: #F8FAFF;
+}
+
+body {
+  font-family: 'Urbanist', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--typo-navy);
+  height: 100vh;
+  overflow: hidden;
+}
+
+.term {
+  text-decoration: underline dotted var(--muted);
+  text-underline-offset: 3px;
+  cursor: help;
+  transition: color 0.15s, text-decoration-color 0.15s;
+}
+.term:hover {
+  color: var(--brand);
+  text-decoration-color: var(--brand);
+}
+
+#g-tip {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  display: none;
+  background: var(--tip-bg);
+  color: var(--tip-text);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  padding: 8px 12px;
+  border-radius: 6px;
+  max-width: 260px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+
+.sidebar-rail {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--sidebar-w);
+  z-index: 200;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 0;
+}
+.sidebar-logo { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; margin-bottom: 16px; }
+.sidebar-nav { display: flex; flex-direction: column; align-items: center; gap: 4px; flex: 1; width: 100%; }
+.sidebar-icon { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 8px; color: var(--muted); }
+.sidebar-icon.active { background: var(--brand-container); color: var(--brand); }
+.sidebar-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--brand); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; margin-top: auto; }
+
+.page-shell { display: flex; flex-direction: column; margin-left: var(--sidebar-w); height: 100vh; overflow: hidden; }
+
+.filter-bar { display: flex; align-items: center; height: 56px; padding: 0 16px; gap: 24px; flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border-v); }
+.flt-btn { display: inline-flex; align-items: center; gap: 6px; background: transparent; border: none; cursor: pointer; font-family: inherit; }
+.flt-label { font-size: 12px; font-weight: 700; color: var(--typo-navy); text-transform: uppercase; letter-spacing: 0.3px; }
+.flt-label::after { content: ":"; margin-right: 2px; }
+.flt-value { font-size: 12px; font-weight: 500; color: var(--brand); display: inline-flex; align-items: center; gap: 4px; }
+.btn-ask-genie-toggle { margin-left: auto; background: transparent; border: 1px solid var(--border-v); border-radius: 20px; padding: 6px 14px; font-family: inherit; font-size: 12px; font-weight: 600; color: var(--brand); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
+.btn-ask-genie-toggle:hover, .btn-ask-genie-toggle.active { background: var(--brand); color: #FFFFFF; }
+
+.cockpit { display: grid; grid-template-columns: 1fr 340px; grid-template-rows: auto 1fr; height: calc(100vh - 56px); padding: 12px; gap: 12px; overflow: hidden; transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+.cockpit.ask-genie-open { grid-template-columns: 1fr 280px 340px; }
+
+.kpi-rows { grid-column: 1 / 2; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; flex: 1; min-height: 0; }
+
+.kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; justify-content: space-between; min-height: 0; height: 100%; }
+.kpi-title-row { font-size: 11px; font-weight: 600; color: var(--muted); }
+.kpi-hero-num { font-size: 22px; font-weight: 700; color: var(--typo-navy); margin-top: 2px; }
+.kpi-trend-row { display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500; margin-top: 1px; }
+.kpi-trend-row.up { color: var(--success); } .kpi-trend-row.dn { color: var(--error); }
+.spark { height: 22px; width: 100%; margin-top: 4px; }
+.kpi-footer-row { font-size: 11px; color: var(--muted); margin-top: auto; padding-top: 4px; border-top: 1px solid var(--border-v); }
+
+.gauge-track { position: relative; height: 6px; border-radius: 9999px; background: var(--surface2); overflow: hidden; margin-top: 8px; }
+.gauge-fill { height: 100%; border-radius: 9999px; }
+.gauge-marker { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--typo-navy); }
+.gauge-label-row { display: flex; justify-content: space-between; font-size: 9px; font-weight: 600; color: var(--muted); margin-top: 2px; }
+
+.outlet-ranking-row { grid-column: 1 / 2; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: hidden; }
+.panel-hdr-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.panel-label { font-size: 13px; font-weight: 700; color: var(--typo-navy); }
+.view-report-link { font-size: 11px; font-weight: 600; color: var(--brand); text-decoration: none; }
+.outlet-hdr, .outlet-row { display: grid; grid-template-columns: 24px 1fr 70px 130px 60px; gap: 8px; align-items: center; padding: 4px 8px; }
+.outlet-hdr { border-bottom: 1px solid var(--border); font-size: 10px; font-weight: 600; color: var(--muted); padding-bottom: 6px; }
+.outlet-row { border-radius: 4px; margin-bottom: 1px; font-size: 11px; }
+.outlet-row:hover { background: #F8FAFC; }
+.o-rank { font-weight: 700; color: var(--muted); }
+.o-val { text-align: right; font-variant-numeric: tabular-nums; }
+
+.panels-row { grid-column: 2 / 3; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; min-height: 0; height: 100%; overflow: hidden; }
+.chart-wrap { flex: 1; position: relative; min-height: 0; width: 100%; height: 100%; }
+
+.insights-sidebar-rail { grid-column: 2 / 3; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+.cockpit:not(.ask-genie-open) .insights-sidebar-rail, .cockpit.ask-genie-open .insights-sidebar-rail { grid-column: 2 / 3; grid-row: 1 / 3; }
+.insight-block-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; height: auto; }
+.insight-header { font-size: 11px; font-weight: 700; text-transform: none; margin-bottom: 6px; }
+.insight-header.risk-title { color: var(--error); } .insight-header.opp-title { color: var(--success); }
+.insight-item { display: flex; align-items: flex-start; gap: 6px; font-size: 11px; line-height: 1.4; margin-bottom: 4px; }
+.insight-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.insight-dot.crit { background: var(--error); } .insight-dot.opp { background: var(--success); }
+.btn-ghost-history { width: 100%; padding: 6px; background: transparent; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font-family: inherit; font-size: 10px; font-weight: 600; cursor: pointer; transition: all 0.15s; margin-top: 4px; }
+.btn-ghost-history:hover { border-color: var(--brand); color: var(--brand); }
+
+.ask-panel-drawer { grid-column: 3 / 4; grid-row: 1 / 3; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; min-height: 0; opacity: 0; pointer-events: none; transform: translateX(15px); transition: opacity 0.25s, transform 0.25s; }
+.cockpit.ask-genie-open .ask-panel-drawer { opacity: 1; pointer-events: auto; transform: translateX(0); }
+.chat-header { padding: 16px; border-bottom: 1px solid var(--border); font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+.chat-clear-btn { background: transparent; border: none; color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer; }
+.chat-feed { flex: 1; padding: 16px; background: var(--bg); overflow-y: auto; font-size: 11px; }
+.chat-msg { background: var(--surface2); padding: 8px 12px; border-radius: 8px; max-width: 85%; }
+.chat-input-container { padding: 12px; border-top: 1px solid var(--border); background: var(--surface); }
+.chat-field-mock { width: 100%; padding: 8px 14px; border: 1px solid var(--border); border-radius: 20px; background: var(--bg); font-size: 11px; outline: none; }
+</style>
+</head>
+<body>
+
+  <div id="g-tip"></div>
+
+  <nav class="sidebar-rail">
+    <div class="sidebar-logo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="var(--warning)"><path d="M12 2C12 2 13 8 16 10C19 12 22 12 22 12C22 12 19 12 16 14C13 16 12 22 12 22C12 22 11 16 8 14C5 12 2 12 2 12C2 12 5 12 8 10C11 8 12 2 12 2Z"/></svg>
+    </div>
+    <div class="sidebar-nav">
+      <div class="sidebar-icon active"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></div>
+    </div>
+    <div class="sidebar-avatar">MK</div>
+  </nav>
+
+  <div class="page-shell">
+    <div class="filter-bar">
+      <button class="flt-btn"><span class="flt-label">Location</span><span class="flt-value">All (80)</span></button>
+      <button class="flt-btn"><span class="flt-label">Period</span><span class="flt-value">17 May – 15 Jun 2026 vs 17 Apr – 16 May 2026</span></button>
+      <button class="btn-ask-genie-toggle" id="genieToggleBtn" onclick="toggleDashboardLayout()"><span>✦ Ask Genie</span></button>
+    </div>
+
+    <main class="cockpit" id="dashboardWorkspace">
+      
+      <div class="kpi-rows">
+        <div class="kpi-row">
+          <div class="kpi-card">
+            <div class="kpi-title-row"><span class="term" data-tip="Net sales is the gross revenue generated from all restaurant sales channels, net of discounts, customer vouchers, and promo deductions.">Net sales</span></div>
+            <div class="kpi-hero-num">RM 2,450,800</div>
+            <div class="kpi-trend-row up">▲ +12.4% (+RM 270k)</div>
+            <div class="spark"><canvas id="sp1"></canvas></div>
+            <div class="kpi-footer-row"><span class="term" data-tip="Average sales per store is the calculated average revenue generated by dividing total brand net sales by the total number of active outlets.">Avg/store</span>: RM 163,386</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title-row"><span class="term" data-tip="Average bill size is the average gross amount of money spent by a customer per single ticket or order across all active locations.">Average bill size</span></div>
+            <div class="kpi-hero-num">RM 35.20</div>
+            <div class="kpi-trend-row up">▲ +8.1%</div>
+            <div class="spark"><canvas id="sp_txn"></canvas></div>
+            <div class="kpi-footer-row"><span class="term" data-tip="Average transactions per store is the average volume of unique point-of-sale invoices or orders processed by an individual store location.">Avg transactions/store</span>: 4,641 <span style="color:var(--error); margin-left:4px; font-weight:700;">▼ −2.3%</span></div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title-row"><span class="term" data-tip="Gross margin is the percentage of total sales revenue retained after accounting for all direct cost of goods sold (COGS) including raw food ingredients and packaging materials.">Gross margin</span></div>
+            <div class="kpi-hero-num">68.2%</div>
+            <div class="kpi-trend-row dn">▼ −1.8%</div>
+            <div class="spark"><canvas id="sp3"></canvas></div>
+            <div class="kpi-footer-row">Baseline target floor constraint: 70.0%</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title-row"><span class="term" data-tip="EBITDA is the net operating profitability before interest, taxes, depreciation, and amortization, tracking pure operational brand execution.">EBITDA</span></div>
+            <div class="kpi-hero-num">RM 124,500</div>
+            <div class="kpi-trend-row up">▲ +3.1%</div>
+            <div class="spark"><canvas id="sp4"></canvas></div>
+            <div class="kpi-footer-row"><span class="term" data-tip="EBITDA margin is the percentage of total sales revenue converted into operating profitability before deducting interest, taxes, depreciation, and amortization.">EBITDA margin</span>: 26.7%</div>
+          </div>
+        </div>
+
+        <div class="kpi-row">
+          <div class="kpi-card">
+            <div class="kpi-title-row"><span class="term" data-tip="Same-store growth is sales growth for outlets open for 12+ months, excludes newly opened and recently closed stores.">Same store growth</span></div>
+            <div class="kpi-hero-num">+5.8%</div>
+            <div class="kpi-trend-row up">▲ +1.7%</div>
+            <div class="spark"><canvas id="sp2"></canvas></div>
+            <div class="kpi-footer-row">Excludes units open under 12 months</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title-row"><span class="term" data-tip="Food cost % is the total expenditure on raw food ingredients, kitchen supplies, and processing stock expressed as a direct percentage of full sales revenue.">Food cost %</span></div>
+            <div class="kpi-hero-num">32.4%</div>
+            <div class="kpi-trend-row up" style="color:var(--warning)">▲ +2.2%</div>
+            <div class="dist-bar-wrap">
+              <div class="gauge-track">
+                <div class="gauge-fill" style="width: 32.4%; background:linear-gradient(90deg, var(--brand) 0%, var(--brand) 85%, var(--warning) 85%);"></div>
+                <div class="gauge-marker" style="left: 30.2%;"></div>
+              </div>
+              <div class="gauge-label-row"><span>0%</span><span>Ideal (30.2%)</span><span>100%</span></div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title-row"><span class="term" data-tip="Campaign performance is the measurement of total promotional campaign sales volume expressed as a direct share of full brand revenue against our strategic contribution targets.">Campaign performance</span></div>
+            <div class="kpi-hero-num">RM 450,200</div>
+            <div class="kpi-trend-row up">▲ +12.4%</div>
+            <div class="dist-bar-wrap">
+              <div class="gauge-track">
+                <div class="gauge-fill" style="width: 18.4%; background: var(--success);"></div>
+                <div class="gauge-marker" style="left: 15%;"></div>
+              </div>
+              <div class="gauge-label-row"><span>0%</span><span>Target (15%)</span><span>100%</span></div>
+            </div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-title-row"><span class="term" data-tip="Active repeating members is the count of loyalty program customers whose last visit falls within the standard, expected visit cycle of your average customer base.">Active repeating members</span></div>
+            <div class="kpi-hero-num">8,360 <span style="font-size:11px; font-weight:500; color:var(--muted)">/ 14,820</span></div>
+            <div class="kpi-trend-row up">▲ +340</div>
+            <div class="dist-bar-wrap">
+              <div class="dist-bar">
+                <div class="dist-seg seg-b" style="width: 56.4%;"></div>
+                <div class="dist-seg seg-d" style="width: 43.6%;"></div>
+              </div>
+              <div class="gauge-label-row"><span>Active 56.4%</span><span>Inactive 43.6%</span></div>
+            </div>
+            <div class="kpi-footer-row"><span class="term" data-tip="Active cycle is the average number of days that elapse between consecutive transactions for a typical returning customer.">Active cycle</span>: 16–30 days</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="outlet-ranking-row">
+        <div class="panel-hdr-row"><span class="panel-label">Outlet rankings</span><a class="view-report-link" href="#">View report ↗</a></div>
+        <div class="outlet-hdr"><div>#</div><div>Outlet</div><div style="text-align: right">Sales</div><div style="text-align: right">Growth (% · RM)</div><div style="text-align: right">Orders</div></div>
+        <div id="rankingTableContainer" style="overflow-y: auto; flex: 1;"></div>
+      </div>
+
+      <div class="panels-row">
+        <div class="panel-hdr-row"><span class="panel-label">Profitability trend</span></div>
+        <div class="chart-wrap"><canvas id="prototypeMainChart"></canvas></div>
+      </div>
+
+      <div class="insights-sidebar-rail">
+        <div class="insight-block-card">
+          <div class="insight-header risk-title">Top risks</div>
+          <div class="insight-item"><span class="insight-dot crit"></span><span>Kajang outlet shut down 2–4 PM</span></div>
+          <div class="insight-item"><span class="insight-dot crit"></span><span>High system overrides frequency at Bangsar</span></div>
+        </div>
+        <div class="insight-block-card">
+          <div class="insight-header opp-title">Opportunities</div>
+          <div class="insight-item"><span class="insight-dot opp"></span><span>Weekday lunch combo — 23 outlets (+RM 380k)</span></div>
+          <button class="btn-ghost-history">View insight history</button>
+        </div>
+      </div>
+
+      <div class="ask-panel-drawer">
+        <div class="chat-header"><span>✦ Ask Genie</span><button class="chat-clear-btn" onclick="toggleDashboardLayout()">[ Close ]</button></div>
+        <div class="chat-feed"><div class="chat-msg">Analysing your metrics timelines... How can I assist you with performance trends today?</div></div>
+        <div class="chat-input-container"><input class="chat-field-mock" type="text" placeholder="Ask a question..." readonly></div>
+      </div>
+
+    </main>
+  </div>
+
+<script>
+const MOCK_RANKINGS = [
+  {name: 'Bangsar BSC', sales: 'RM 198k', growth: '+72.4% (+RM 83k)', orders: '3,124', up: true},
+  {name: 'Pavilion Bukit Jalil', sales: 'RM 174k', growth: '+68.1% (+RM 70k)', orders: '2,891', up: true},
+  {name: 'KLCC Main', sales: 'RM 162k', growth: '+41.2% (+RM 47k)', orders: '2,640', up: true},
+  {name: 'Cheras Selatan', sales: 'RM 48k', growth: '−18.2% (−RM 10k)', orders: '820', up: false},
+  {name: 'Shah Alam Setia City', sales: 'RM 61k', growth: '−9.4% (−RM 6k)', orders: '1,020', up: false}
+];
+
+document.getElementById('rankingTableContainer').innerHTML = MOCK_RANKINGS.map((o, i) => `
+  <div class="outlet-row">
+    <div class="o-rank">${String(i+1).padStart(2, '0')}</div>
+    <div class="o-name">${o.name}</div>
+    <div class="o-val" style="color:var(--brand); font-weight:700;">${o.sales}</div>
+    <div class="o-val ${o.up ? 'up' : 'dn'}">${o.growth}</div>
+    <div class="o-val" style="color:var(--muted);">${o.orders}</div>
+  </div>
+`).join('');
+
+function toggleDashboardLayout() {
+  document.getElementById('dashboardWorkspace').classList.toggle('ask-genie-open');
+  document.getElementById('genieToggleBtn').classList.toggle('active');
+}
+
+const ctx = document.getElementById('prototypeMainChart').getContext('2d');
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: ['5d', '10d', '15d', '20d', '25d', '30d'],
+    datasets: [
+      { label: 'Current Period', data: [59.2, 60.1, 59.8, 62.0, 61.5, 62.1], borderColor: '#10C8A0', backgroundColor: 'transparent', borderWidth: 2.5, tension: 0.3 },
+      { label: 'Previous Period', data: [57.8, 58.6, 58.2, 60.5, 60.0, 60.7], borderColor: '#7FE3CD', borderDash: [4, 4], backgroundColor: 'transparent', borderWidth: 1.5, tension: 0.3 }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { x: { grid: { display: false } }, y: { min: 55, max: 65, ticks: { callback: v => v + '%' } } }
+  }
+});
+
+const sparks = ['sp1', 'sp_txn', 'sp3', 'sp4', 'sp2'];
+sparks.forEach(id => {
+  const c = document.getElementById(id); if(!c) return;
+  new Chart(c.getContext('2d'), {
+    type: 'line',
+    data: { labels: [1,2,3,4,5], datasets: [{ data: [10,12,9,15,14], borderColor: '#3730A3', borderWidth: 1.5, pointRadius: 0, tension: 0.4 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } } }
+  });
+});
+
+const tip = document.getElementById('g-tip');
+document.addEventListener('mouseover', e => {
+  const node = e.target.closest('[data-tip]'); if (!node) return;
+  tip.textContent = node.dataset.tip;
+  tip.style.display = 'block';
+  const bounds = node.getBoundingClientRect();
+  tip.style.left = (bounds.left + (bounds.width / 2) - (tip.offsetWidth / 2)) + 'px';
+  tip.style.top = (bounds.top - tip.offsetHeight - 8) + 'px';
+});
+document.addEventListener('mouseout', e => { if (e.target.closest('[data-tip]')) tip.style.display = 'none'; });
+</script>
+</body>
+</html>
